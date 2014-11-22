@@ -2,9 +2,10 @@
 
 server.get("/", function (request, response) {
     
-    
-
-    
+    function isBigEnough(element) {
+        return element >= 10;
+    }
+   
     
     //var ret = mentionCounter.count(input);
     response.simpleText(200, "Hello World!");
