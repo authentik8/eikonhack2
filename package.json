@@ -1,0 +1,10 @@
+{
+  "name": "EikonHack",
+  "version": "0.0.0",
+  "description": "EikonHack",
+  "main": "server.js",
+  "author": {
+    "name": "Jonathan",
+    "email": ""
+  }
+}
