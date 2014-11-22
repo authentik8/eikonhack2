@@ -1,6 +1,11 @@
-﻿var http = require('http');
-var port = process.env.port || 1337;
-http.createServer(function (req, res) {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Hello World\n');
-}).listen(port);
+﻿var server = require('./node_modules/node-router/lib/node-router.js').getServer();
+
+server.get("/", function (request, response) {
+    response.simpleText(200, "Hello World!");
+});
+
+server.get("/test", function (request, response) {
+    response.simpleText(200, "Test response");
+})
+
+server.listen(8000, "localhost");
