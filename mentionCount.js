@@ -1,31 +1,38 @@
-var data; // response from API Call
-
-var jsonArr = []; // JSON ouput
-var dataSet =  data.Headlines;
-var dataSetLength = dataSet.length;
-
-for (var i = 0; i < dataSetLength; i++){
+exports.count = function (data)
+{
+ // response from API Call
+    var array = [];
+    var dataSet = data;
+    var dataSetLength = data.length;
     
-    var rics = data.Headlines[i].PrimaryRics;
-    
-    // Filter Articles without Ticker & Articles with Currency Ticker
-    if (rics != undefined && rics.indexOf("=") == -1){
+    for (var i = 0; i < dataSetLength; i++) {
         
-        if (rics.indexOf(" ") > -1){
+        var rics = data[i].PrimaryRics;
+        
+        // Filter Articles without Ticker & Articles with Currency Ticker
+        if (rics != null && rics != undefined && rics.indexOf("=") == -1) {
             
-            var result = rics.split(" ");
-            for (var j = 0; j < result.length; j++){
-                 addTicker(jsonArr, result[j]);
-            }
+            if (rics.indexOf(" ") > -1) {
+                
+                var result = rics.split(" ");
+                for (var j = 0; j < result.length; j++) {
+                    if (hasTicker(array, result[j])) {
+                        updateCount(array, result[j]);
+                    } else {
+                        addTicker(array, result[j]);
+                    }
+                }
 
-        } else {
-            if (hasTicker(jsonArr, rics)){              
-                updateCount(jsonArr, rics); 
             } else {
-                addTicker(jsonArr, rics);
+                if (hasTicker(array, rics)) {
+                    updateCount(array, rics);
+                } else {
+                    addTicker(array, rics);
+                }
             }
         }
     }
+    return array;
 }
 
 function addTicker(data, ticker){
