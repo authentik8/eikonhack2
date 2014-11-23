@@ -101,3 +101,17 @@ function getoutstandingShares(financialData){
    
    return outstandingShares;
 }
+
+// if end = "2014-11-21T23:59:59" & dayApart = 0
+// return "2014-11-21T00:00:00"
+
+var end = "2014-11-21T23:59:59";
+function getStartDate(end, dayApart){
+    var endDate = new Date(end);
+    var temp = new Date(endDate);
+    temp.setDate(temp.getDate() - dayApart);
+    var startDate = new Date(temp);
+    var dateString = (startDate.getYear()+1900) + "-" + (startDate.getMonth()+1) + "-" + startDate.getDate() + "T00:00:00";
+    return dateString;
+}
+
