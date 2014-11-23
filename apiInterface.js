@@ -8,7 +8,7 @@ var msf = new MSF(true);
 
 //Variables representing start & end dates for the financial mention query
 var start = "2014-11-21T00:00:00";
-var end = "2014-11-21T03:59:59";
+var end = "2014-11-21T04:59:59";
 
 //Variable to aggregate headline queries into
 var newsArr = [];
@@ -18,8 +18,14 @@ var mentionTop = [];
 var priceHistory = [];
 var outstandingShs = [];
 
-//Variable representing response object (can make calls to this to display data)
-var responseObject;
+//Variables representing callback & response object (can make calls to this to display data)
+var callbackFunc;
+var responseObject = {};
+
+//Variables to track when price history & outstanding shares queries have completed
+var priceHistoryComplete = false;
+var outstandingShsComplete = false;
+var mentionsComplete = false;
 
 /*
  * Variable to keep track of the last story date 
@@ -28,15 +34,13 @@ var responseObject;
 var prevlastArticleTimestamp = "";
 
 //Function to display data in browser (as opposed to returning to console)
-function returnData(payload) {
-    responseObject.simpleText(200, JSON.stringify(payload));
-}
+
 
 //Externally exposed function called by server.js to initiate download procedures
-exports.getHeadlineData = function (func, respObject) {
+exports.getHeadlineData = function (respObject, callback) {
     msf.login(username, password, function (error) {
         if (!error) {
-            callbackFunc = func;
+            callbackFunc = callback;
             responseObject = respObject;
             makeNewsRequest();
         }
@@ -105,16 +109,82 @@ function makeNewsRequest() {
                     var tickers = mentionTop.map(function (node) { return node.ticker; });
                     
                     fs.writeFile('mentionTop.json', JSON.stringify(mentionTop));
-
+                    
+                    mentionsComplete = true;
+                    
                     makePriceRequest(tickers);
-                    makeOutstandingSharesRequest(tickers);
-                    //returnData(tickers);
                 }
             }
         }
         
     );
 }
+
+//function makeSlicedPriceRequest(fullTickerList){
+
+//    var splitArray = [];   
+
+//    var i, j, chunk = 20;
+//    for (i = 0, j = fullTickerList.length; i < j; i += chunk) {
+//        splitArray.push(fullTickerList.slice(i, i + chunk));
+//    }
+
+//    var outstandingRequests = 0;
+
+//    for (var k = 0; k < splitArray.length; k++) {
+//        outstandingRequests++;
+//        makePartialPriceRequest(splitArray[k], function () {
+//            outstandingRequests--;
+//        });
+//    }
+
+//    while (outstandingRequests != 0) {
+//        process.nextTick();
+//    }
+
+
+
+//}
+
+//function makePartialPriceRequest(tickerListSlice,callback) {
+//    msf.getData({
+//        "Entity": {
+//            "E": "TATimeSeries",
+//            "W": {
+//                "Tickers": tickerListSlice,
+//                "NoInfo": false,
+//                "Interval": "Daily",
+//                "IntervalMultiplier": 1,
+//                "DateRangeMultiplier": 1,
+//                "StartDate": start,
+//                "EndDate": start,
+//                "Analysis": [
+//                    "OHLCV"
+//                ]
+//            }
+//        }
+//    }, function (error, response) {
+//        if (!error) {
+//            var hist = response.R.filter(function (filterNode) {
+//                return (filterNode.Data.length != 0);
+//            }).map(function (node) {
+//                    var obj = {};
+//                    obj.ticker = node.Ticker;
+//                    var open = parseFloat(node.Data[0].Open);
+//                    var close = parseFloat(node.Data[0].Close);
+//                    obj.performance = (close - open) / open;
+//                    obj.date = node.Data[0].Date;
+//                    return obj;
+//                });
+
+//            for (var i = 0; i < hist.length; i++) {
+//                priceHistory.push(hist[i]);
+//            }
+
+//            callback();
+//        }
+//    });
+//}
 
 function makePriceRequest(tickers) {
     msf.getData({
@@ -135,18 +205,28 @@ function makePriceRequest(tickers) {
         }
     }, function (error, response) {
         if (!error) {
-            priceHistory = response.R.filter(function (filterNode) {
+            console.log("Processing price request");
+            var hist = response.R.filter(function (filterNode) {
                 return (filterNode.Data.length != 0);
             }).map(function (node) {
                     var obj = {};
                     obj.ticker = node.Ticker;
                     var open = parseFloat(node.Data[0].Open);
-                    var close = parseFloat(node.Data[0].Close);
-                    obj.change = (close - open) / open;
+                    obj.close = parseFloat(node.Data[0].Close);
+                    obj.performance = (obj.close - open) / open;
                     obj.date = node.Data[0].Date;
                     return obj;
                 });
+            
+            for (var i = 0; i < hist.length; i++) {
+                priceHistory.push(hist[i]);
+            }
+            
             fs.writeFile('priceHistory.json', JSON.stringify(priceHistory));
+            priceHistoryComplete = true;
+            
+            
+            makeOutstandingSharesRequest(tickers);
         }
     });
 }
@@ -156,7 +236,7 @@ function makeOutstandingSharesRequest(tickers) {
         "Entity": {
             "E": "Financials",
             "W": {
-                "Symbols": tickers,
+                "Symbols": tickers.slice(0, 20),
                 "COACodes": [
                     "QTCO"
                 ],
@@ -168,7 +248,8 @@ function makeOutstandingSharesRequest(tickers) {
         }
     }, function (error, response) {
         if (!error) {
-            var outstandingShs = response[""].filter(function (em) {
+            console.log("Processing outstanding request");
+            outstandingShs = response[""].filter(function (em) {
                 return (em.Error == undefined);
             }).map(function (node) {
                     return shareInfo = { "ticker": node.MsfId , "outstandingShares" : getOutstandingShares(node) };
@@ -178,11 +259,15 @@ function makeOutstandingSharesRequest(tickers) {
                     outstandingShs.push(shareInfo = { "ticker": ticker, "outstandingShares" : 0 });
                 }
             });
-            outstandingShs = outstandingShs.filter(function (node){
+            outstandingShs = outstandingShs.filter(function (node) {
                 return (node.outstandingShares != 0);
             })
-
+            
             fs.writeFile('outstandingShares.json', JSON.stringify(outstandingShs));
+            outstandingShsComplete = true;
+            
+            zipArrays();
+            
         }
     });
 }
@@ -194,11 +279,15 @@ function getOutstandingShares(financialData) {
                 .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].PeriodFilingHeader
                 .Units.ConvertedTo;
     
+    console.log(financialData.MsfId);
     
-    var shares = financialData.StandardizedFinancials.FinancialInformation
+    var shares = 0;
+    
+    if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].Statements.Statement[0].FinancialValues.FV != undefined) {
+        shares = financialData.StandardizedFinancials.FinancialInformation
                 .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].Statements
                 .Statement[0].FinancialValues.FV[0].___MSFVALUE;
-    
+    }
     if (units == "M") {
         outstandingShares = shares * 1000000;
     } else if (units == "T") {
@@ -206,4 +295,38 @@ function getOutstandingShares(financialData) {
     }
     
     return outstandingShares;
+}
+
+function zipArrays() {
+    var respJson = { "mentions": mentionTop, "performance": priceHistory, "outstandingShares": outstandingShs };
+    
+    var aggregate = [];
+    
+    respJson.mentions.forEach(function (node) {
+        aggregate.push(node);
+    });
+    
+    respJson.performance.forEach(function (node) {
+        var tickerPos = aggregate.map(function (aggregateNode) {
+            return aggregateNode.ticker;
+        }).indexOf(node.ticker);
+        if (tickerPos != -1) {
+            aggregate[tickerPos].performance = node.performance;
+            aggregate[tickerPos].date = node.date;
+            aggregate[tickerPos].close = node.close;
+        }
+    });
+    
+    respJson.outstandingShares.forEach(function (node) {
+        var tickerPos = aggregate.map(function (aggregateNode) {
+            return aggregateNode.ticker;
+        }).indexOf(node.ticker);
+        if (tickerPos != -1) {
+            aggregate[tickerPos].marketCap = aggregate[tickerPos].close * node.outstandingShares;
+        }
+    })
+    callbackFunc(responseObject, aggregate.filter(function (node) {
+            return node.marketCap != undefined;
+        }));
+
 }
