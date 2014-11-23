@@ -7,8 +7,8 @@ var password = "Secret123";
 var msf = new MSF(true);
 
 //Variables representing start & end dates for the financial mention query
-var start = "2014-11-20T00:00:00";
-var end = "2014-11-20T23:59:59";
+var start = "2014-11-19T00:00:00";
+var end = "2014-11-19T23:59:59";
 var mentionVar = 3;
 
 //Variable to aggregate headline queries into
@@ -272,7 +272,7 @@ function zipArrays() {
         return (node.marketCap != undefined && node.marketCap != null);
     });
     
-    fs.writeFile("aggregated-file-data-20-11.json", JSON.stringify(aggregate, false, 2));
+    fs.writeFile("aggregated-file-data-19-11.json", JSON.stringify(aggregate, false, 2));
     
     callbackFunc(aggregate);
 }
