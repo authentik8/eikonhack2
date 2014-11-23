@@ -115,3 +115,7 @@ function getStartDate(end, dayApart){
     return dateString;
 }
 
+function getDateArray(start, number){
+    
+}
+

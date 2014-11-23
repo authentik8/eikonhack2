@@ -7,8 +7,9 @@ var password = "Secret123";
 var msf = new MSF(true);
 
 //Variables representing start & end dates for the financial mention query
-var start = "2014-11-21T00:00:00";
-var end = "2014-11-21T23:59:59";
+var start = "2014-11-20T00:00:00";
+var end = "2014-11-20T23:59:59";
+var mentionVar = 3;
 
 //Variable to aggregate headline queries into
 var newsArr = [];
@@ -94,7 +95,7 @@ function makeNewsRequest() {
                     
                     //Filter out the noise of companies mentioned only once or twice
                     mentionTop = (mentionCount.filter(function (el) {
-                        return el.mentions >= 3;
+                        return el.mentions >= mentionVar;
                     }));
                     
                     // Extract the list of tickers from the more-often mentioned companies (>=3)
@@ -204,9 +205,14 @@ function makeOutstandingSharesRequest(tickers) {
 function getOutstandingShares(financialData) {
     var outstandingShares = 0;
     
-    var units = financialData.StandardizedFinancials.FinancialInformation
+    var units = "O";
+    if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period != undefined) {
+        if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling != undefined) {
+            financialData.StandardizedFinancials.FinancialInformation
                 .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].PeriodFilingHeader
                 .Units.ConvertedTo;
+        }
+    }
     
     console.log(financialData.MsfId);
     
@@ -221,6 +227,8 @@ function getOutstandingShares(financialData) {
         outstandingShares = shares * 1000000;
     } else if (units == "T") {
         outstandingShares = shares * 1000;
+    } else if (units == "O") {
+        outstandingShares = shares;
     }
     
     return outstandingShares;
@@ -235,7 +243,7 @@ function zipArrays() {
         aggregate.push(node);
     });
     
-    respJson.performance.forEach(function (node){ 
+    respJson.performance.forEach(function (node) {
         var tickerPos = aggregate.map(function (aggregateNode) {
             return aggregateNode.ticker;
         }).indexOf(node.ticker);
@@ -253,9 +261,13 @@ function zipArrays() {
         if (tickerPos != -1) {
             aggregate[tickerPos].marketCap = aggregate[tickerPos].close * node.outstandingShares;
         }
-    })
+    });
     
-    fs.writeFile("aggregated-file-data-23-11.json", JSON.stringify(aggregate,false,2));
+    aggregate = aggregate.filter(function (node) {
+        return (node.marketCap != undefined && node.marketCap != null);
+    });
+    
+    fs.writeFile("aggregated-file-data-20-11.json", JSON.stringify(aggregate, false, 2));
     
     callbackFunc(aggregate);
 }
