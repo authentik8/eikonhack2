@@ -86,7 +86,6 @@ function makeNewsRequest() {
 
                 } else {
                     //We have finished aggregating the news articles
-                    //console.log(newsArr.length);
                     
                     //Import the mentionCounter module
                     var mentionCounter = require('./mentionCount.js');
@@ -104,8 +103,9 @@ function makeNewsRequest() {
                     
                     // Extract the list of tickers from the more-often mentioned companies (>=3)
                     var tickers = mentionTop.map(function (node) { return node.ticker; });
-                    //console.log(JSON.stringify(tickers));
-                    //tickers = tickers.slice(0, 3);
+                    
+                    fs.writeFile('mentionTop.json', JSON.stringify(mentionTop));
+
                     makePriceRequest(tickers);
                     makeOutstandingSharesRequest(tickers);
                     //returnData(tickers);
@@ -146,7 +146,7 @@ function makePriceRequest(tickers) {
                     obj.date = node.Data[0].Date;
                     return obj;
                 });
-            //console.log(JSON.stringify(priceHistory));
+            fs.writeFile('priceHistory.json', JSON.stringify(priceHistory));
         }
     });
 }
@@ -178,7 +178,11 @@ function makeOutstandingSharesRequest(tickers) {
                     outstandingShs.push(shareInfo = { "ticker": ticker, "outstandingShares" : 0 });
                 }
             });
-            console.log(JSON.stringify(outstandingShs));
+            outstandingShs = outstandingShs.filter(function (node){
+                return (node.outstandingShares != 0);
+            })
+
+            fs.writeFile('outstandingShares.json', JSON.stringify(outstandingShs));
         }
     });
 }
@@ -202,38 +206,4 @@ function getOutstandingShares(financialData) {
     }
     
     return outstandingShares;
-}
-
-exports.getPriceData = function () {
-    msf.login(username, password, function (error) {
-        if (!error) {
-            msf.getData({
-                "Entity": {
-                    "E": "TATimeSeries",
-                    "W": {
-                        "Tickers": [
-                            "AAPL.O"
-                        ],
-                        "NoInfo": false,
-                        "Interval": "Daily",
-                        "IntervalMultiplier": 1,
-                        "DateRangeMultiplier": 1,
-                        "StartDate": "2014-11-10T00:00:00",
-                        "EndDate": "2014-11-21T00:00:00",
-                        "Analysis": [
-                            "OHLCV"
-                        ]
-                    }
-                }
-            }, function (error, response) {
-                if (!error) {
-                    console.log(JSON.stringify(response, false, 2));
-                } else {
-                    console.log("Error retrieving data: " + error);
-                }
-            });
-        } else {
-            console.log("Login error: " + error);
-        }
-    });
 }
