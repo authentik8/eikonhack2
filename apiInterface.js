@@ -206,22 +206,27 @@ function getOutstandingShares(financialData) {
     var outstandingShares = 0;
     
     var units = "O";
-    if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period != undefined) {
-        if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling != undefined) {
-            financialData.StandardizedFinancials.FinancialInformation
-                .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].PeriodFilingHeader
-                .Units.ConvertedTo;
-        }
-    }
-    
-    console.log(financialData.MsfId);
-    
+    try {
+        console.log(financialData.MsfId);
+    } catch (err) { }
     var shares = 0;
     
-    if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].Statements.Statement[0].FinancialValues.FV != undefined) {
-        shares = financialData.StandardizedFinancials.FinancialInformation
+    try {
+        if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period != undefined) {
+            if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling != undefined) {
+                units = financialData.StandardizedFinancials.FinancialInformation
+                .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].PeriodFilingHeader
+                .Units.ConvertedTo;
+            }
+        }
+        
+        
+        if (financialData.StandardizedFinancials.FinancialInformation.FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].Statements.Statement[0].FinancialValues.FV != undefined) {
+            shares = financialData.StandardizedFinancials.FinancialInformation
                 .FinancialStatements.Period[0].PeriodFilings.PeriodFiling[0].Statements
                 .Statement[0].FinancialValues.FV[0].___MSFVALUE;
+        }
+    } catch (err) {
     }
     if (units == "M") {
         outstandingShares = shares * 1000000;
